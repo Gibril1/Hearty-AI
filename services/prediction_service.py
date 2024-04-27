@@ -1,13 +1,9 @@
 import os
 from dotenv import load_dotenv
 load_dotenv()
-from pydantic import BaseModel
 from langchain.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
-
-
-class PredictionData(BaseModel):
-    prediction: int
+from schemas.llm_schemas import PredictionSchema
 
 llm = ChatOpenAI(
     api_key=os.getenv('OPENAI_API_KEY'),
@@ -16,7 +12,7 @@ llm = ChatOpenAI(
 )
 class ModelPredictionService:
 
-    def format_model_response(self, result:PredictionData):
+    def format_model_response(self, result:PredictionSchema):
         if result.prediction == 1:
             result_output = "You have a heart disease"
         elif result.prediction == 0:
@@ -36,5 +32,4 @@ class ModelPredictionService:
             'context': context,
             'input': "Can you please tell me the status of my heart"
         })
-
-        return response
+        return response.content
