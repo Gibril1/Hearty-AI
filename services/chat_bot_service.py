@@ -66,6 +66,12 @@ class ChatBotService:
 
 
     def chat_with_bot_plus_history(self, user_prompt:PromptSchema,context:PredictionSchema, user_id:str):
+        
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """       
         if context.prediction == 1:
             context_result = "I have a heart disease"
         elif context.prediction == 0:

@@ -13,10 +13,7 @@ llm = ChatOpenAI(
 class ModelPredictionService:
 
     def format_model_response(self, result:PredictionSchema):
-        if result.prediction == 1:
-            result_output = "You have a heart disease"
-        elif result.prediction == 0:
-            result_output = "You do not have a heart disease"
+        
 
         prompt = ChatPromptTemplate.from_messages([
             ("system", "You are a trained cardiologist. A message would be passed to you to determine the heart status of your patient. Formulate either a congratulatory message or an encouraging message based on your patient: {context}"),
@@ -24,7 +21,7 @@ class ModelPredictionService:
         ])
 
 
-        context = f"{result_output}"
+        context = f"You are trained cardiologist who gives results on whether a user has a heart disease or not. An AI model predicts this. This is the result. A confidence level of {result.confidence} and a verdict of {result.prediction}"
 
         chain = prompt | llm
 

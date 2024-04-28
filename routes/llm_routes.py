@@ -21,5 +21,5 @@ def chat_bot(user_prompt:PromptSchema, prediction_data:PredictionSchema):
     return chat.chat_with_bot(user_prompt, prediction_data)
 
 @llm_routes.post('/history', status_code=status.HTTP_200_OK)
-def chat_bot_plus_history(user_prompt:PromptSchema, prediction_data:PredictionSchema, user_id:str):
-    return chat.chat_with_bot_plus_history(user_prompt, prediction_data, user_id)
+def chat_bot_plus_history(user_prompt:PromptSchema, prediction_data:PredictionSchema, chat_id:str):
+    return chat.chat_with_bot_plus_history(user_prompt, prediction_data, chat_id)

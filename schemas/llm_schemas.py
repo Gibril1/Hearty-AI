@@ -1,7 +1,8 @@
 from pydantic import BaseModel
 
 class PredictionSchema(BaseModel):
-    prediction: int
+    confidence: float
+    prediction: str
 
 class PromptSchema(BaseModel):
     prompt: str
