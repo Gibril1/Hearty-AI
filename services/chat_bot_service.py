@@ -4,7 +4,7 @@ load_dotenv()
 import redis
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
-from schemas.llm_schemas import PredictionSchema, PromptSchema
+from schemas.llm_schemas import PredictionSchema, PromptSchema, ContextSchema
 from langchain_community.chat_message_histories.upstash_redis import (
     UpstashRedisChatMessageHistory
 )
@@ -33,15 +33,12 @@ llm = ChatOpenAI(
 )
 
 class ChatBotService:
-    def chat_with_bot(self, user_prompt:PromptSchema, context:PredictionSchema):
-        if context.prediction == 1:
-            context_result = "You have a heart disease"
-        elif context.prediction == 0:
-            context_result = "You do not have a heart disease"
+    def chat_with_bot(self, user_prompt:PromptSchema, context:ContextSchema):
+        
         
         
         prompt = ChatPromptTemplate.from_messages([
-            ('system', 'You are a trained cardiologist, who has the ability to give practical advice on heart related device. Based on {context}. You are able to advice users on what to do next. Be as kind as possible. And for users who do not have a heart disease, you can be jovial.Be as concise as possible with your response'),
+            ('system', 'You are a trained cardiologist, who has the ability to give practical advice on heart related device. A user had provided you with {context}. You are able to advice the user on what to do next. Be as kind as possible. Be as concise as possible with your response'),
             MessagesPlaceholder(variable_name='chat_history'),
             ('human', '{input}')
         ])
@@ -55,7 +52,7 @@ class ChatBotService:
 
         ai_response = chain.invoke({
             'input': user_prompt.prompt,
-            'context': context_result,
+            'context': context.context,
             'chat_history': chat_history
         })
         history.add_user_message(user_prompt.prompt)

@@ -6,3 +6,7 @@ class PredictionSchema(BaseModel):
 
 class PromptSchema(BaseModel):
     prompt: str
+
+
+class ContextSchema(BaseModel):
+    context: str
