@@ -16,7 +16,10 @@ class ModelPredictionService:
         
 
         prompt = ChatPromptTemplate.from_messages([
-            ("system", "You are a trained cardiologist. A message would be passed to you to determine the heart status of your patient. Formulate either a congratulatory message or an encouraging message based on your patient: {context}"),
+            ("system", """Formualate a congratulatory message or an encouraging message based on this.
+             
+             Context: {context}
+             """),
             ("human", "{input}")
         ])
 

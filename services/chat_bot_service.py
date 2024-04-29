@@ -18,7 +18,7 @@ redis_cache = redis.Redis(
   ssl=True
 )
 
-# Upstash redis: It was supposed to be used to handle our history messages but it did not work for our usecases. I left it there for presentation purposes
+# Upstash redis: It was supposed to be used to handle our history messages but it did not work for our usecases. I left it here for presentation purposes
 history = UpstashRedisChatMessageHistory(
     url=os.getenv('REDIS_HOST'),
     token=os.getenv('REDIS_TOKEN'),
@@ -38,7 +38,7 @@ class ChatBotService:
         
         
         prompt = ChatPromptTemplate.from_messages([
-            ('system', 'You are a trained cardiologist, who has the ability to give practical advice on heart related device. A user had provided you with {context}. You are able to advice the user on what to do next. Be as kind as possible. Be as concise as possible with your response'),
+            ('system', 'You are a trained cardiologist, who has the ability to give practical advice on heart related device. You can tell whether a user has a heart disease or not.A user had provided you with {context}. You are able to advice the user on what to do next. Be as kind as possible. Be as concise as possible with your response'),
             MessagesPlaceholder(variable_name='chat_history'),
             ('human', '{input}')
         ])
