@@ -4,7 +4,7 @@ load_dotenv()
 from langchain.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from schemas.llm_schemas import PredictionSchema
-
+from utils.formatting import convert_data
 llm = ChatOpenAI(
     api_key=os.getenv('OPENAI_API_KEY'),
     model='gpt-3.5-turbo',
@@ -12,11 +12,11 @@ llm = ChatOpenAI(
 )
 class ModelPredictionService:
 
-    def format_model_response(self, result:PredictionSchema):
-        
+    def format_model_response(self, patient_data:PredictionSchema):
+        formatted_data, confidence, prediction = convert_data(patient_data)
 
         prompt = ChatPromptTemplate.from_messages([
-            ("system", """Formualate a congratulatory message or an encouraging message based on this.
+            ("system", """You are a trained cardiologist.
              
              Context: {context}
              """),
@@ -24,12 +24,14 @@ class ModelPredictionService:
         ])
 
 
-        context = f"You are trained cardiologist who gives results on whether a user has a heart disease or not. An AI model predicts this. This is the result. A confidence level of {result.confidence} and a verdict of {result.prediction}"
+        context = f"You are trained cardiologist. You are supposed to be more like a virtual assistant to a doctor. In your response, speak as if you are talking to a doctor. Explain what this {formatted_data} means and advice the doctor on what to tell to his patient with these conditions. The data was passed through an AI model and it presented a confidence level of {confidence} and a prediction that {prediction}"
 
         chain = prompt | llm
 
         response = chain.invoke({
             'context': context,
-            'input': "Can you please tell me the status of my heart"
+            'input': "What practical advise can you give to the doctor?"
         })
         return response.content
+
+        # return formatted_data, confidence, prediction
