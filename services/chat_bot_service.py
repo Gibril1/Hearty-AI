@@ -5,6 +5,7 @@ import redis
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from schemas.llm_schemas import PredictionSchema, PromptSchema, ContextSchema
+from utils.formatting import convert_data
 from fastapi import HTTPException, status
 from langchain_community.chat_message_histories.upstash_redis import (
     UpstashRedisChatMessageHistory
@@ -70,37 +71,41 @@ class ChatBotService:
     
 
 
-    def chat_with_bot_plus_history(self, user_prompt:PromptSchema,context:ContextSchema, user_id:str):
+    def chat_with_bot_plus_history(self, user_prompt:PromptSchema, context:ContextSchema, user_id:str):
         try:
+            formatted_data, confidence, prediction = convert_data(context)
+            
             prompt = ChatPromptTemplate.from_messages([
-                ('system', 'You are a trained cardiologist, who has the ability to give practical advice on heart related device. You can tell whether a user has a heart disease or not.A user had provided you with {context}. You are able to advice the user on what to do next. Be as kind as possible. Be as concise as possible with your response'),
+                ('system', '{context}'),
                 MessagesPlaceholder(variable_name='chat_history'),
                 ('human', '{input}')
             ])
 
 
-            # chain the prompt to the llm
+            # # chain the prompt to the llm
             chain = prompt | llm
 
             
-            # let us work on getting chat history
+            # # let us work on getting chat history
             chat_history = redis_cache.get(user_id)
             if not chat_history:
                 chat_history = redis_cache.set(user_id, '')
             
 
             bytes_to_string = redis_cache.get(user_id).decode('utf8')
-            chat_history_array = bytes_to_string.split('\n')
+            chat_history_array = bytes_to_string.split(' ')
             
+            context = f"You are trained cardiologist. You are supposed to be more like a virtual assistant to a doctor. In your response, speak as if you are talking to a patient. Explain what this {formatted_data} means and advice the patient on what to do. You are supposed to help the patient navigate through anything related to the heart and the diseases. The data was passed through an AI model and it presented a confidence level of {confidence} and a prediction that {prediction}"
+
             response = chain.invoke(
-            {"context": context.context, "input": user_prompt.prompt, "chat_history": chat_history_array},
+            {"context": context, "input": user_prompt.prompt, "chat_history": chat_history_array},
             )
 
-            redis_cache.append(user_id, user_prompt.prompt + '\n')
-            redis_cache.append(user_id, + response.content + '\n')
+            redis_cache.append(user_id, ' ,'+user_prompt.prompt)
+            redis_cache.append(user_id, ' ,'+ response.content)
 
             return response.content
         except Exception as e:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
-
+            # return formatted_data, confidence, prediction

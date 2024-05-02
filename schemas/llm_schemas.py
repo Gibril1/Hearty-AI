@@ -8,4 +8,4 @@ class PromptSchema(BaseModel):
 
 
 class ContextSchema(BaseModel):
-    context: dict
+    patient_report: dict
