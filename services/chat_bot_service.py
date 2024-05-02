@@ -1,4 +1,5 @@
 import os
+import logging
 from dotenv import load_dotenv
 load_dotenv()
 import redis
@@ -10,6 +11,9 @@ from fastapi import HTTPException, status
 from langchain_community.chat_message_histories.upstash_redis import (
     UpstashRedisChatMessageHistory
 )
+
+# init logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 # Init redis: Redis would be used for our persistent data storage for our chat history and memory purposes
@@ -74,7 +78,8 @@ class ChatBotService:
     def chat_with_bot_plus_history(self, user_prompt:PromptSchema, context:ContextSchema, user_id:str):
         try:
             formatted_data, confidence, prediction = convert_data(context)
-            
+
+
             prompt = ChatPromptTemplate.from_messages([
                 ('system', '{context}'),
                 MessagesPlaceholder(variable_name='chat_history'),
@@ -84,16 +89,16 @@ class ChatBotService:
 
             # # chain the prompt to the llm
             chain = prompt | llm
-
+            logging.info('Prompt has been passed on to the LLM')
             
             # # let us work on getting chat history
-            chat_history = redis_cache.get(user_id)
+            chat_history = redis_cache.lrange(user_id, 0, -1)
             if not chat_history:
-                chat_history = redis_cache.set(user_id, '')
+                chat_history_array = []
             
 
-            bytes_to_string = redis_cache.get(user_id).decode('utf8')
-            chat_history_array = bytes_to_string.split(' ')
+            chat_history_array = [message.decode('utf-8') for message in chat_history]
+            
             
             context = f"You are trained cardiologist. You are supposed to be more like a virtual assistant to a doctor. In your response, speak as if you are talking to a patient. Explain what this {formatted_data} means and advice the patient on what to do. You are supposed to help the patient navigate through anything related to the heart and the diseases. The data was passed through an AI model and it presented a confidence level of {confidence} and a prediction that {prediction}"
 
@@ -101,11 +106,18 @@ class ChatBotService:
             {"context": context, "input": user_prompt.prompt, "chat_history": chat_history_array},
             )
 
-            redis_cache.append(user_id, ' ,'+user_prompt.prompt)
-            redis_cache.append(user_id, ' ,'+ response.content)
+            redis_cache.rpush(user_id, user_prompt.prompt)
+            redis_cache.rpush(user_id, response.content)
+
+            chat_history = redis_cache.lrange(user_id, 0, -1)
+            logging.info(f'The user prompt is {user_prompt.prompt}')
+            logging.info(f'The LLM response is {response.content}')
+
+
 
             return response.content
         except Exception as e:
+            print(e)
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
             # return formatted_data, confidence, prediction

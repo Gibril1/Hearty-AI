@@ -31,5 +31,5 @@ def convert_data(data):
         '2': 'Reversible Defect'
     }[data.patient_report['thal']]
 
-    print(converted_data)
+    
     return converted_data, data.patient_report['confidence'], data.patient_report['prediction']
