@@ -5,6 +5,7 @@ import redis
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from schemas.llm_schemas import PredictionSchema, PromptSchema, ContextSchema
+from fastapi import HTTPException, status
 from langchain_community.chat_message_histories.upstash_redis import (
     UpstashRedisChatMessageHistory
 )
@@ -35,66 +36,71 @@ llm = ChatOpenAI(
 
 class ChatBotService:
     def chat_with_bot(self, user_prompt:PromptSchema, context:PredictionSchema):
-        if context.prediction == 1:
-            context_result = "I have a heart disease"
-        elif context.prediction == 0:
-            context_result = "I do not have a heart disease"
-        
-        
-        prompt = ChatPromptTemplate.from_messages([
-            ('system', 'You are a trained cardiologist, who has the ability to give practical advice on heart related device. You can tell whether a user has a heart disease or not.A user had provided you with {context}. You are able to advice the user on what to do next. Be as kind as possible. Be as concise as possible with your response'),
-            MessagesPlaceholder(variable_name='chat_history'),
-            ('human', '{input}')
-        ])
+        try:
+            if context.prediction == 1:
+                context_result = "I have a heart disease"
+            elif context.prediction == 0:
+                context_result = "I do not have a heart disease"
+            
+            
+            prompt = ChatPromptTemplate.from_messages([
+                ('system', 'You are a trained cardiologist, who has the ability to give practical advice on heart related device. You can tell whether a user has a heart disease or not.A user had provided you with {context}. You are able to advice the user on what to do next. Be as kind as possible. Be as concise as possible with your response'),
+                MessagesPlaceholder(variable_name='chat_history'),
+                ('human', '{input}')
+            ])
 
-        # chain the prompt to the llm
-        chain = prompt | llm
-        
-        
-        chat_history = history.messages
+            # chain the prompt to the llm
+            chain = prompt | llm
+            
+            
+            chat_history = history.messages
 
 
-        ai_response = chain.invoke({
-            'input': user_prompt.prompt,
-            'context': context_result,
-            'chat_history': chat_history
-        })
-        history.add_user_message(user_prompt.prompt)
-        history.add_ai_message(ai_response.content)
+            ai_response = chain.invoke({
+                'input': user_prompt.prompt,
+                'context': context_result,
+                'chat_history': chat_history
+            })
+            history.add_user_message(user_prompt.prompt)
+            history.add_ai_message(ai_response.content)
 
-        return ai_response.content
+            return ai_response.content
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
 
 
     def chat_with_bot_plus_history(self, user_prompt:PromptSchema,context:ContextSchema, user_id:str):
-        
-        prompt = ChatPromptTemplate.from_messages([
-            ('system', 'You are a trained cardiologist, who has the ability to give practical advice on heart related device. You can tell whether a user has a heart disease or not.A user had provided you with {context}. You are able to advice the user on what to do next. Be as kind as possible. Be as concise as possible with your response'),
-            MessagesPlaceholder(variable_name='chat_history'),
-            ('human', '{input}')
-        ])
+        try:
+            prompt = ChatPromptTemplate.from_messages([
+                ('system', 'You are a trained cardiologist, who has the ability to give practical advice on heart related device. You can tell whether a user has a heart disease or not.A user had provided you with {context}. You are able to advice the user on what to do next. Be as kind as possible. Be as concise as possible with your response'),
+                MessagesPlaceholder(variable_name='chat_history'),
+                ('human', '{input}')
+            ])
 
 
-        # chain the prompt to the llm
-        chain = prompt | llm
+            # chain the prompt to the llm
+            chain = prompt | llm
 
-        
-        # let us work on getting chat history
-        chat_history = redis_cache.get(user_id)
-        if not chat_history:
-            chat_history = redis_cache.set(user_id, '')
-        
+            
+            # let us work on getting chat history
+            chat_history = redis_cache.get(user_id)
+            if not chat_history:
+                chat_history = redis_cache.set(user_id, '')
+            
 
-        bytes_to_string = redis_cache.get(user_id).decode('utf8')
-        chat_history_array = bytes_to_string.split(',')
-        
-        response = chain.invoke(
-        {"context": context.context, "input": user_prompt.prompt, "chat_history": chat_history_array},
-        )
+            bytes_to_string = redis_cache.get(user_id).decode('utf8')
+            chat_history_array = bytes_to_string.split('\n')
+            
+            response = chain.invoke(
+            {"context": context.context, "input": user_prompt.prompt, "chat_history": chat_history_array},
+            )
 
-        redis_cache.append(user_id, ', ' + user_prompt.prompt)
-        redis_cache.append(user_id, ', ' + response.content)
+            redis_cache.append(user_id, user_prompt.prompt + '\n')
+            redis_cache.append(user_id, + response.content + '\n')
 
-        return response.content
+            return response.content
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
 
